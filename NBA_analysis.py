@@ -177,14 +177,14 @@ print(F'Correlation between height and weight in the NBA: {round(pearsonr(nba_df
 
 
 #%% Is there a change in professinal basketball regarding the 3 Point Shot
-nba_df_2005 = nba_df.loc[nba_df['Year'] < 2010].copy()
+nba_df_2010 = nba_df.loc[nba_df['Year'] < 2010].copy()
 nba_df_2020 = nba_df.loc[nba_df['Year'] >= 2010].copy()
 
 
 from matplotlib.ticker import PercentFormatter
 
 fig, (ax1, ax2) = plt.subplots(2,1, sharey = True)
-ax1.hist(nba_df_2005['3PA'], weights = [1/len(nba_df_2005['3PA'])] * len(nba_df_2005['3PA']), ec='black', label = '1999 - 2009')
+ax1.hist(nba_df_2010['3PA'], weights = [1/len(nba_df_2010['3PA'])] * len(nba_df_2010['3PA']), ec='black', label = '1999 - 2009')
 ax2.hist(nba_df_2020['3PA'], color = 'red', weights = [1/len(nba_df_2020['3PA'])] * len(nba_df_2020['3PA']), ec='black', label = '2010 - 2019')
 ax1.set_title('3 Point Attempts')
 ax1.legend()
@@ -206,20 +206,20 @@ plt.show()
 
 from scipy.stats import ttest_ind, levene
 
-if levene(nba_df_2005['3PA'],nba_df_2020['3PA']).pvalue > 0.05:
-    stat_3P, pval_3P = ttest_ind(nba_df_2005['3PA'],nba_df_2020['3PA'])
+if levene(nba_df_2010['3PA'],nba_df_2020['3PA']).pvalue > 0.05:
+    stat_3P, pval_3P = ttest_ind(nba_df_2010['3PA'],nba_df_2020['3PA'])
     print(F'''
 T-Test for 3 Point attempts (Between 1999-2009 and 2010-2019) - Equal-Variance
-Mean (1999-2005): {round(nba_df_2005['3PA'].mean(),2)}
-Mean (2015-2020): {round(nba_df_2020['3PA'].mean(),2)}
+Mean (1999-2009): {round(nba_df_2010['3PA'].mean(),2)}
+Mean (2010-2020): {round(nba_df_2020['3PA'].mean(),2)}
 p-value = {round(pval_3P, 4)}
 Statistic = {round(stat_3P, 4)}''')
 else:
-    stat_3P, pval_3P = ttest_ind(nba_df_2005['FGA'],nba_df_2020['3PA'], equal_var = False)
+    stat_3P, pval_3P = ttest_ind(nba_df_2010['FGA'],nba_df_2020['3PA'], equal_var = False)
     print(F'''
 T-Test for 3 Point attempts (Between 1999-2009 and 2010-2019) - Non-Equal-Variance
-Mean (1999-2005): {round(nba_df_2005['3PA'].mean(),2)}
-Mean (2015-2020): {round(nba_df_2020['3PA'].mean(),2)}
+Mean (1999-2009): {round(nba_df_2010['3PA'].mean(),2)}
+Mean (2010-2020): {round(nba_df_2020['3PA'].mean(),2)}
 p-value = {round(pval_3P, 4)}
 Statistic = {round(stat_3P, 4)}''')
 
@@ -257,6 +257,8 @@ var_EL = EL_df['height_cm'].var()
 fig, (ax1, ax2) = plt.subplots(2,1, sharey = True)
 ax1.hist(nba_df['height_cm'], weights = [1/len(nba_df['height_cm'])] * len(nba_df['height_cm']), ec='black', label = 'NBA')
 ax2.hist(EL_df['height_cm'], color = 'red', weights = [1/len(EL_df['height_cm'])] * len(EL_df['height_cm']), ec='black', label = 'Euroleague')
+ax1.axvline(x = mean_nba, color = 'black', label = 'Mean')
+ax2.axvline(x = mean_EL, color = 'black', label = 'Mean')
 ax1.set_title('Height in cm')
 ax1.legend()
 ax2.legend()
@@ -295,6 +297,8 @@ var_EL = EL_df['weight_kg'].var()
 fig, (ax1, ax2) = plt.subplots(2,1, sharey = True)
 ax1.hist(nba_df['weight_kg'], weights = [1/len(nba_df['weight_kg'])] * len(nba_df['weight_kg']), ec='black', label = 'NBA')
 ax2.hist(EL_df['weight_kg'], color = 'red', weights = [1/len(EL_df['weight_kg'])] * len(EL_df['weight_kg']), ec='black', label = 'Euroleague')
+ax1.axvline(x = mean_nba, color = 'black', label = 'Mean')
+ax2.axvline(x = mean_EL, color = 'black', label = 'Mean')
 ax1.set_title('Weight in kg')
 ax1.legend()
 ax2.legend()
@@ -388,13 +392,78 @@ nba_df_clean['position'] = nba_df_clean['position'].apply(lambda x: F'{clean_pos
 
 #%% EDA for Position
 import seaborn as sns
+from scipy import stats
+from statsmodels.sandbox.stats.multicomp import MultiComparison
+ 
+positions = ['PG', 'SG', 'SF', 'PF', 'C']
 
-sns.countplot(nba_df_clean['position'], order = ['PG', 'SG', 'PF', 'SF', 'C'], ec='black')
+sns.countplot(nba_df_clean['position'], order = positions, ec='black')
 plt.ylim(0, 1400)
 plt.title('Number of Players by Position')
 plt.xlabel('Position')
 plt.ylabel('No. of Players')
 plt.show()
+
+position_counts = nba_df_clean['position'].value_counts()
+print(position_counts)
+print()
+
+test_stat = stats.chisquare(position_counts)
+print(F'''Chi Square Value of Chi Square Test: {round(test_stat.statistic,4)}
+P-Value of Chi Square Test: {round(test_stat.pvalue,4)}
+''')
+
+#Trying to see if SG Position is an Outlier
+position_counts = position_counts[0:4]
+print(position_counts)
+print()
+
+test_stat = stats.chisquare(position_counts)
+print(F'''Chi Square Value of Chi Square Test: {round(test_stat.statistic,4)}
+P-Value of Chi Square Test: {round(test_stat.pvalue,4)}
+''')
+
+heights = []
+print('Mean height per position:')
+for position in positions:
+    mean_height = round(nba_df_clean[nba_df_clean['position'] == position]['height_cm'].mean(),2)
+    print(F"{position} : {mean_height} cm")
+    heights.append(mean_height)
+sns.barplot(positions, heights, ec = 'black')
+plt.title('Average height by Position')
+plt.xlabel('Position')
+plt.ylabel('Height')
+plt.show()
+print()
+
+weights = []
+print('Mean weight per position:')
+for position in positions:
+    mean_weight = round(nba_df_clean[nba_df_clean['position'] == position]['weight_kg'].mean(),2)
+    print(F"{position} : {mean_weight} kg")
+    weights.append(mean_weight)
+sns.barplot(positions, weights, ec = 'black')
+plt.title('Average weight by Position')
+plt.xlabel('Position')
+plt.ylabel('Weight')
+plt.show()
+print()
+
+PG = nba_df_clean[nba_df_clean['position'] == 'PG']
+SG = nba_df_clean[nba_df_clean['position'] == 'SG']
+PF = nba_df_clean[nba_df_clean['position'] == 'PF']
+SF = nba_df_clean[nba_df_clean['position'] == 'SF']
+C = nba_df_clean[nba_df_clean['position'] == 'C']
+
+print(stats.f_oneway(PG['height_cm'], SG['height_cm'], PF['height_cm'], SF['height_cm'], C['height_cm']))
+MultiComp = MultiComparison(nba_df_clean['height_cm'], nba_df_clean['position'])
+print(MultiComp.tukeyhsd().summary())
+print()
+
+print(stats.f_oneway(PG['weight_kg'], SG['weight_kg'], PF['weight_kg'], SF['weight_kg'], C['weight_kg']))
+MultiComp = MultiComparison(nba_df_clean['weight_kg'], nba_df_clean['position'])
+print(MultiComp.tukeyhsd().summary())
+print()
 
 #%% Classify Playerposition
 from sklearn.ensemble import RandomForestClassifier
@@ -462,22 +531,23 @@ from sklearn.model_selection import cross_val_score
 from sklearn.metrics import cohen_kappa_score
 import numpy as np
 
-
+y_true = nba_df_clean['position']
 y_tree = position_tree.predict(nba_df_clean[variables])
 y_clf = position_clf.predict(nba_df_clean[variables])
 y_log = position_log.predict(scaler.transform(nba_df_clean[variables], copy = True))
 
-y_list = [y_tree, y_clf, y_log]
-model_dict = {0 : 'Decision Tree', 1 : 'Random Forest', 2 : 'Logistic Regression'}
+y_list = [y_tree, y_clf, y_log, y_true]
+model_dict = {0 : 'Decision Tree', 1 : 'Random Forest', 2 : 'Logistic Regression', 3 : 'True Values'}
 
-for prediction in range(0,len(y_list)):
-    sns.countplot(y_list[prediction], order = ['PG', 'SG', 'PF', 'SF', 'C'], ec='black')
+for prediction in range(0,len(y_list) - 1):
+    sns.countplot(y_list[prediction], order = positions, ec='black')
     plt.ylim(0, 1400)
     plt.title(F'Predicited Number of Players by Position ({model_dict[prediction]})')
     plt.xlabel('Position')
     plt.ylabel('No. of Players')
     plt.show()
 
+print('Reliability Test with Cohens Kappa')
 for i in range(0,len(y_list)):
     for x in range(i+1, len(y_list)):
         ck = cohen_kappa_score(y_list[i], y_list[x])
@@ -485,6 +555,8 @@ for i in range(0,len(y_list)):
 print()
 
 kf = KFold(n_splits = 5, shuffle = True)
+
+print('Cross Validation:')
 
 scores_tree = cross_val_score(DecisionTreeClassifier(), nba_df_clean[variables], nba_df_clean['position'], cv = kf)
 print(F'Decision Tree mean score: {round(np.mean(scores_tree)*100, 2)}%')
